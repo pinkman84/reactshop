@@ -4,23 +4,22 @@ let CartBox = require('./CartBox.jsx');
 let SampleData = require('../sampleData.js');
 let NavBox = require('./NavBox.jsx');
 let CategoryBox = require('./CategoryBox.jsx');
-let Shop = require('../shop.js');
+let Vouchers = require('../voucherData.js');
 
-let shop = new Shop();
+
 //main box to get the data and pass it down to the dumb elements
 let ShopBox = React.createClass({
   getInitialState: function() {
     return {
       products: SampleData,
-      cart: []
-
+      cart: [],
+      vouchers: Vouchers
     };
   },
 
   filterProducts: function(gender){
       //need a filter and a map
       let list = this.state.products.filter(function(product){
-        // console.log("filter", product);
         return (product.gender === gender)
       })
       return list
@@ -35,71 +34,109 @@ let ShopBox = React.createClass({
 
     //this function will handle adding something to the shopping cart
     addToBasket: function(item){
-      this.checkStock
       let selectedItem = this.state.products.filter(function(product){
         return (product.id === +item)
       })
-      console.log("selected Item", selectedItem)
-      for(var i = 0; i < this.state.cart.length; i++){
-          if(this.state.cart[i].id === selectedItem.first.id ){
-            this.state.cart[i].orderQty += 1
-          }
-          else{
-            let updatedCart = this.state.cart
-            updatedCart.concat(selectedItem)
-            console.log(updatedCart);
-            this.setState({
-              cart: updatedCart 
-            })
-          }
-      }
-      
-    },
-
-    //this will be called if an item is deleted from a basket
-    deleteFromBasket: function(item){
-      console.log(item)
-      let cart = this.state.cart
-      console.log("cart", cart);
-      for (var i = 0; i < cart.length; i++) {
-        if(cart[i].id === item){
-          cart.splice(cart[i], 1)
-        }
-        this.setState({cart: cart})
-      }
-      
+      // let updatedCart = this.state.cart
+      this.checkStock(selectedItem[0])
     },
 
     //this will check if an item is out of stock
     checkStock: function(item){
-      if(!item.qty){
-        return
+      if(item.orderQty > item.qty){
+        window.promt("not enough stock, would you like us to contact you when we have more?")
+      } else{
+      let updatedCart = this.state.cart
+      this.checkBasket(item, updatedCart)
+    }
+  },
+
+  checkBasket: function(item, list){
+    console.log("In here: ", list, item);
+    if(!list.length){
+      var newList = list.concat(item);      
+      this.setState({
+        cart: newList 
+      });
+    }
+    for(var i = 0; i < list.length; i++){
+      if(list[i].id === item.id ){
+        list[i].orderQty += 1
+        this.setState({cart: list})
       }
+      else{
+        var newList = list.concat(item)
+        this.setState({
+          cart: newList 
+        });
+      }
+    }
+  },
 
-    },
-
+    //this will be called if an item is deleted from a basket
+    deleteFromBasket: function(item){
+      let cart = this.state.cart
+      console.log("cart", cart, item);
+      for(var i = 0; i < cart.length; i++){
+        if (cart[i].id == item) {
+          if (cart[i].orderQty > 1) {
+            cart[i].orderQty -= 1
+            console.log(cart);
+            this.setState({
+              cart: cart 
+            });
+          } else {
+           cart.splice(i, 1);
+           this.setState({
+            cart: cart
+          });
+         }
+       }
+     }
+   },
 
     //this will check what is in the basket and apply discounts and vouchers
-    voucherchecker: function(){
-
+    applyVouchers: function(input){
+      let attempt = this.state.voucher.filter(function(code){
+        return (input === code)
+      })
     },
 
+    calculateSubTotal: function(products){
+      let subTotal = 0
+      if (!products.length){
+        return subTotal
+      }
+      else{
+        for(var i = 0; i < products.length; i++){
 
-  render: function(){
-    return(
-      <div>
-        <NavBox  />
-        <CategoryBox  />
+          subTotal += +products[i].ref
+        }
+        return subTotal
+      }
+    },
+
+    render: function(){
+      return(
+        <div>
         <ProductsBox 
-            items={this.filterProducts('womens')} 
-            addItem={this.addToBasket}/>
+        className="womens"
+        items={this.filterProducts('womens')} 
+        addItem={this.addToBasket}/>
         <ProductsBox 
-            items={this.filterProducts('mens')} 
-            addItem={this.addToBasket} />
-        <CartBox takeItem={this.state.cart} remove={this.deleteFromBasket} total={this.calculateTotal} />
-      </div>
-      )
-  }
-})
+        className="mens"
+        items={this.filterProducts('mens')} 
+        addItem={this.addToBasket} />
+        <CartBox 
+        className="cart"
+        takeItem={this.state.cart} 
+        remove={this.deleteFromBasket} 
+        total={this.calculateTotal}
+        subTotal={this.calculateSubTotal}
+        applyVouchers={this.applyVouchers} />
+        </div>
+        )
+    }
+  })
 
 module.exports = ShopBox;

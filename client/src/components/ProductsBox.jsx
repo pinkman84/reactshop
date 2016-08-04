@@ -14,10 +14,17 @@ var ProductsBox = React.createClass({
     if(!this.props.items){return <h4>retrieving stock</h4>};
     let productList = this.props.items.map(function(product){
       return(
-        <div  key={product.id} >
-          
+        <div  
+        key={product.id}
+        className="product"
+         >
+        
+
           <h4>item picture here</h4>
-          {product.name + " , " + product.colour + " " + "£" + product.price + " Stock available " + product.qty}
+          <p>{product.name}</p>
+          <p>{product.colour}</p>
+          <p>£{product.price.toFixed(2)}</p>
+          <p>Stock available {product.qty}</p>
 
           <button type="submit" value={product.id} onClick={this.handleSubmit} >add to basket</button>
           

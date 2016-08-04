@@ -21429,11 +21429,10 @@
 	var ProductsBox = __webpack_require__(176);
 	var CartBox = __webpack_require__(177);
 	var SampleData = __webpack_require__(178);
-	var NavBox = __webpack_require__(180);
-	var CategoryBox = __webpack_require__(181);
-	var Shop = __webpack_require__(179);
+	var NavBox = __webpack_require__(179);
+	var CategoryBox = __webpack_require__(180);
+	var Vouchers = __webpack_require__(181);
 	
-	var shop = new Shop();
 	//main box to get the data and pass it down to the dumb elements
 	var ShopBox = React.createClass({
 	  displayName: 'ShopBox',
@@ -21441,15 +21440,14 @@
 	  getInitialState: function getInitialState() {
 	    return {
 	      products: SampleData,
-	      cart: []
-	
+	      cart: [],
+	      vouchers: Vouchers
 	    };
 	  },
 	
 	  filterProducts: function filterProducts(gender) {
 	    //need a filter and a map
 	    var list = this.state.products.filter(function (product) {
-	      // console.log("filter", product);
 	      return product.gender === gender;
 	    });
 	    return list;
@@ -21464,20 +21462,39 @@
 	
 	  //this function will handle adding something to the shopping cart
 	  addToBasket: function addToBasket(item) {
-	    this.checkStock;
 	    var selectedItem = this.state.products.filter(function (product) {
 	      return product.id === +item;
 	    });
-	    console.log("selected Item", selectedItem);
-	    for (var i = 0; i < this.state.cart.length; i++) {
-	      if (this.state.cart[i].id === selectedItem.first.id) {
-	        this.state.cart[i].orderQty += 1;
+	    // let updatedCart = this.state.cart
+	    this.checkStock(selectedItem[0]);
+	  },
+	
+	  //this will check if an item is out of stock
+	  checkStock: function checkStock(item) {
+	    if (item.orderQty > item.qty) {
+	      window.promt("not enough stock, would you like us to contact you when we have more?");
+	    } else {
+	      var updatedCart = this.state.cart;
+	      this.checkBasket(item, updatedCart);
+	    }
+	  },
+	
+	  checkBasket: function checkBasket(item, list) {
+	    console.log("In here: ", list, item);
+	    if (!list.length) {
+	      var newList = list.concat(item);
+	      this.setState({
+	        cart: newList
+	      });
+	    }
+	    for (var i = 0; i < list.length; i++) {
+	      if (list[i].id === item.id) {
+	        list[i].orderQty += 1;
+	        this.setState({ cart: list });
 	      } else {
-	        var updatedCart = this.state.cart;
-	        updatedCart.concat(selectedItem);
-	        console.log(updatedCart);
+	        var newList = list.concat(item);
 	        this.setState({
-	          cart: updatedCart
+	          cart: newList
 	        });
 	      }
 	    }
@@ -21485,40 +21502,65 @@
 	
 	  //this will be called if an item is deleted from a basket
 	  deleteFromBasket: function deleteFromBasket(item) {
-	    console.log(item);
 	    var cart = this.state.cart;
-	    console.log("cart", cart);
+	    console.log("cart", cart, item);
 	    for (var i = 0; i < cart.length; i++) {
-	      if (cart[i].id === item) {
-	        cart.splice(cart[i], 1);
+	      if (cart[i].id == item) {
+	        if (cart[i].orderQty > 1) {
+	          cart[i].orderQty -= 1;
+	          console.log(cart);
+	          this.setState({
+	            cart: cart
+	          });
+	        } else {
+	          cart.splice(i, 1);
+	          this.setState({
+	            cart: cart
+	          });
+	        }
 	      }
-	      this.setState({ cart: cart });
-	    }
-	  },
-	
-	  //this will check if an item is out of stock
-	  checkStock: function checkStock(item) {
-	    if (!item.qty) {
-	      return;
 	    }
 	  },
 	
 	  //this will check what is in the basket and apply discounts and vouchers
-	  voucherchecker: function voucherchecker() {},
+	  applyVouchers: function applyVouchers(input) {
+	    var attempt = this.state.voucher.filter(function (code) {
+	      return input === code;
+	    });
+	  },
+	
+	  calculateSubTotal: function calculateSubTotal(products) {
+	    var subTotal = 0;
+	    if (!products.length) {
+	      return subTotal;
+	    } else {
+	      for (var i = 0; i < products.length; i++) {
+	
+	        subTotal += +products[i].ref;
+	      }
+	      return subTotal;
+	    }
+	  },
 	
 	  render: function render() {
 	    return React.createElement(
 	      'div',
 	      null,
-	      React.createElement(NavBox, null),
-	      React.createElement(CategoryBox, null),
 	      React.createElement(ProductsBox, {
+	        className: 'womens',
 	        items: this.filterProducts('womens'),
 	        addItem: this.addToBasket }),
 	      React.createElement(ProductsBox, {
+	        className: 'mens',
 	        items: this.filterProducts('mens'),
 	        addItem: this.addToBasket }),
-	      React.createElement(CartBox, { takeItem: this.state.cart, remove: this.deleteFromBasket, total: this.calculateTotal })
+	      React.createElement(CartBox, {
+	        className: 'cart',
+	        takeItem: this.state.cart,
+	        remove: this.deleteFromBasket,
+	        total: this.calculateTotal,
+	        subTotal: this.calculateSubTotal,
+	        applyVouchers: this.applyVouchers })
 	    );
 	  }
 	});
@@ -21554,13 +21596,37 @@
 	    var productList = this.props.items.map(function (product) {
 	      return React.createElement(
 	        "div",
-	        { key: product.id },
+	        {
+	          key: product.id,
+	          className: "product"
+	        },
 	        React.createElement(
 	          "h4",
 	          null,
 	          "item picture here"
 	        ),
-	        product.name + " , " + product.colour + " " + "£" + product.price + " Stock available " + product.qty,
+	        React.createElement(
+	          "p",
+	          null,
+	          product.name
+	        ),
+	        React.createElement(
+	          "p",
+	          null,
+	          product.colour
+	        ),
+	        React.createElement(
+	          "p",
+	          null,
+	          "£",
+	          product.price.toFixed(2)
+	        ),
+	        React.createElement(
+	          "p",
+	          null,
+	          "Stock available ",
+	          product.qty
+	        ),
 	        React.createElement(
 	          "button",
 	          { type: "submit", value: product.id, onClick: this.handleSubmit },
@@ -21590,77 +21656,109 @@
 /* 177 */
 /***/ function(module, exports, __webpack_require__) {
 
-	"use strict";
+	'use strict';
 	
 	var React = __webpack_require__(1);
 	
 	var CartBox = React.createClass({
-	  displayName: "CartBox",
+	  displayName: 'CartBox',
 	
 	
 	  getInitialState: function getInitialState() {
 	    return {
-	      total: 5,
-	      vouchers: 2
+	      total: 0.00,
+	      voucher: '',
+	      sample: 10
 	    };
-	  },
-	
-	  addTotal: function addTotal(price) {
-	    this.setState({
-	      total: this.state.total + price
-	    });
 	  },
 	
 	  handleRemove: function handleRemove(e) {
 	    this.props.remove(e.target.value);
 	  },
 	
+	  handleChange: function handleChange(e) {
+	    console.log(e.target.value);
+	    this.setState({
+	      vouchers: e.target.value
+	    });
+	  },
+	
+	  applyVouchers: function applyVouchers(e) {
+	    e.preventDefault();
+	    this.props.applyVouchers(this.state.voucher);
+	    this.setState({
+	      voucher: ''
+	    });
+	  },
+	
 	  render: function render() {
 	    var pendingPurchase = this.props.takeItem.map(function (product) {
-	
 	      return React.createElement(
-	        "div",
-	        { key: product.id },
-	        product.name + " ",
-	        " " + product.colour + "  \n",
-	        "£",
-	        product.price.toFixed(2),
-	        "quantity: ",
-	        product.orderQty,
+	        'div',
+	        { className: 'product', key: product.id, ref: product.price.toFixed(2) * product.orderQty },
 	        React.createElement(
-	          "button",
-	          { type: "submit", onClick: this.handleRemove, value: product.id },
-	          "remove item"
+	          'p',
+	          null,
+	          product.name + " "
+	        ),
+	        React.createElement(
+	          'p',
+	          null,
+	          " " + product.colour + "  \n"
+	        ),
+	        React.createElement(
+	          'p',
+	          null,
+	          'item(s) total £',
+	          product.price.toFixed(2) * product.orderQty
+	        ),
+	        React.createElement(
+	          'p',
+	          null,
+	          'quantity: ',
+	          product.orderQty
+	        ),
+	        React.createElement(
+	          'button',
+	          { type: 'submit', onClick: this.handleRemove, value: product.id },
+	          'remove item'
 	        )
 	      );
 	    }.bind(this));
 	
 	    return React.createElement(
-	      "div",
-	      null,
+	      'div',
+	      { className: 'cart' },
 	      React.createElement(
-	        "h3",
-	        null,
-	        "Cart"
+	        'h3',
+	        { className: 'cart-header' },
+	        'Cart'
 	      ),
+	      React.createElement('img', { className: 'basket', src: '/images/cart.png', width: '30', height: '30' }),
 	      pendingPurchase,
 	      React.createElement(
-	        "h3",
-	        null,
-	        "Sub Total: £",
-	        this.state.total.toFixed(2)
+	        'form',
+	        { onSubmit: this.applyVouchers },
+	        React.createElement('input', { type: 'text', placeholder: 'voucher code', onChange: this.handleChange }),
+	        React.createElement('input', { type: 'submit' })
 	      ),
 	      React.createElement(
-	        "h3",
+	        'h3',
 	        null,
-	        "Voucher Discount: £",
-	        this.state.vouchers.toFixed(2)
+	        'Sub Total: £',
+	        this.props.subTotal(pendingPurchase).toFixed(2)
 	      ),
 	      React.createElement(
-	        "h3",
+	        'h3',
 	        null,
-	        "Total: £",
-	        (this.state.total -= this.state.vouchers).toFixed(2)
+	        'Voucher Discount: £',
+	        this.state.sample
+	      ),
+	      React.createElement(
+	        'h3',
+	        null,
+	        'Total: £',
+	        this.props.subTotal(pendingPurchase).toFixed(2) - this.state.sample
 	      )
 	    );
 	  }
@@ -21675,70 +21773,12 @@
 
 	"use strict";
 	
-	var sampleData = [{ id: 1, gender: "mens", style: "formalwear", name: "Sharkskin Waistcoat", colour: "charcoal", price: 75.00, qty: 2, orderQty: 0 }, { id: 2, gender: "mens", style: "formalwear", name: "Light Weight Patch Pocket Blazer", colour: "deer", price: 175.50, qty: 1, orderQty: 0 }, { id: 3, gender: "mens", style: "casualwear", name: "Fine Stripe short sleeve shirt", colour: "green", price: 39.99, qty: 3, orderQty: 0 }, { id: 4, gender: "mens", style: "casualwear", name: "Fine Stripe short sleeve shirt", colour: "grey", price: 49.99, qty: 9, orderQty: 0 }, { id: 5, gender: "mens", style: "footwear", name: "flip flops", colour: "blue", price: 19.00, qty: 0, orderQty: 0 }, { id: 6, gender: "mens", style: "footwear", name: "flip flops", colour: "red", price: 19.00, qty: 6, orderQty: 0 }, { id: 7, gender: "mens", style: "footwear", name: "Leather Driver Saddle Loafers", colour: "tan", price: 34.00, qty: 12, orderQty: 0 }, { id: 8, gender: "womens", style: "formalwear", name: "Mid Twist Cut-Out Dress", colour: "pink", price: 540.00, qty: 5, orderQty: 0 }, { id: 9, gender: "womens", style: "formalwear", name: "Bird Print Dress", colour: "black", price: 270.00, qty: 10, orderQty: 0 }, { id: 10, gender: "womens", style: "casualwear", name: "Gold Button Cardigan", colour: "black", price: 167.00, qty: 6, orderQty: 0 }, { id: 11, gender: "womens", style: "casualwear", name: "Cotton shorts", colour: "medium red", price: 30.00, qty: 5, orderQty: 0 }, { id: 12, gender: "womens", style: "footwear", name: "Suede Shoes", colour: "blue", price: 42.00, qty: 4, orderQty: 0 }, { id: 13, gender: "womens", style: "footwear", name: "Almond Toe Court Shoes", colour: "Patent Black", price: 99.00, qty: 5, orderQty: 0 }];
+	var sampleData = [{ id: 1, gender: "mens", style: "formalwear", name: "Sharkskin Waistcoat", colour: "charcoal", price: 75.00, qty: 2, orderQty: 1 }, { id: 2, gender: "mens", style: "formalwear", name: "Light Weight Patch Pocket Blazer", colour: "deer", price: 175.50, qty: 1, orderQty: 1 }, { id: 3, gender: "mens", style: "casualwear", name: "Fine Stripe short sleeve shirt", colour: "green", price: 39.99, qty: 3, orderQty: 1 }, { id: 4, gender: "mens", style: "casualwear", name: "Fine Stripe short sleeve shirt", colour: "grey", price: 49.99, qty: 9, orderQty: 1 }, { id: 5, gender: "mens", style: "footwear", name: "flip flops", colour: "blue", price: 19.00, qty: 0, orderQty: 1 }, { id: 6, gender: "mens", style: "footwear", name: "flip flops", colour: "red", price: 19.00, qty: 6, orderQty: 1 }, { id: 7, gender: "mens", style: "footwear", name: "Leather Driver Saddle Loafers", colour: "tan", price: 34.00, qty: 12, orderQty: 1 }, { id: 8, gender: "womens", style: "formalwear", name: "Mid Twist Cut-Out Dress", colour: "pink", price: 540.00, qty: 5, orderQty: 1 }, { id: 9, gender: "womens", style: "formalwear", name: "Bird Print Dress", colour: "black", price: 270.00, qty: 10, orderQty: 1 }, { id: 10, gender: "womens", style: "casualwear", name: "Gold Button Cardigan", colour: "black", price: 167.00, qty: 6, orderQty: 1 }, { id: 11, gender: "womens", style: "casualwear", name: "Cotton shorts", colour: "medium red", price: 30.00, qty: 5, orderQty: 1 }, { id: 12, gender: "womens", style: "footwear", name: "Suede Shoes", colour: "blue", price: 42.00, qty: 4, orderQty: 1 }, { id: 13, gender: "womens", style: "footwear", name: "Almond Toe Court Shoes", colour: "Patent Black", price: 99.00, qty: 5, orderQty: 1 }];
 	
 	module.exports = sampleData;
 
 /***/ },
 /* 179 */
-/***/ function(module, exports) {
-
-	"use strict";
-	
-	var Shop = function Shop() {
-	  this.womensRange = [];
-	  this.mensRange = [];
-	  this.shoppingCart = [];
-	};
-	
-	Shop.prototype = {
-	  //this will filter the products to male and female for the seperate product boxes
-	  filterProducts: function filterProducts(array, gender) {
-	    //need a filter and a map
-	    var list = array.filter(function (product) {
-	      return product.gender === gender;
-	    });
-	    return list;
-	  },
-	
-	  filterCategories: function filterCategories(array) {
-	    var list = array.map(function (items) {
-	      return items.style;
-	    });
-	    return list;
-	  },
-	
-	  //this function will handle adding something to the shopping cart
-	  addToBasket: function addToBasket(item) {
-	    var selectedItem = void 0;
-	  },
-	
-	  //this will be called if an item is deleted from a basket
-	  handleDeleteFromBasket: function handleDeleteFromBasket(item, cart) {
-	    for (var i = 0; i < cart.length; i++) {
-	      if (cart[i].id === item.id) {
-	        //need to check if the arguments are index first?
-	        cart.splice(1, i);
-	      }
-	    }
-	  },
-	
-	  //this will check if an item is out of stock
-	  checkStock: function checkStock(item) {
-	    if (!item.qty) {
-	      return;
-	    }
-	  },
-	
-	  //this will check what is in the basket and apply discounts and vouchers
-	  voucherchecker: function voucherchecker() {}
-	
-	};
-	
-	module.exports = Shop;
-
-/***/ },
-/* 180 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -21767,7 +21807,7 @@
 	module.exports = NavBox;
 
 /***/ },
-/* 181 */
+/* 180 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -21785,6 +21825,16 @@
 	});
 	
 	module.exports = CategoryBox;
+
+/***/ },
+/* 181 */
+/***/ function(module, exports) {
+
+	"use strict";
+	
+	var voucherData = [{ amount: 5, code: "5£OFF" }, { amount: 5, code: "12345" }, { amount: 10, code: "10£OFF", condition: "total must be more than £50.00" }, { amount: 15, code: "15£OFF", condition: "total must be more than £75.00 and at least 1 item of footwear" }];
+	
+	module.exports = voucherData;
 
 /***/ }
 /******/ ]);
