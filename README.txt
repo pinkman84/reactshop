@@ -25,6 +25,33 @@ when an item is out of stock or you try to order more than is in stock I wanted 
 ITEM PICTURES
 if I had more time I would have liked to add some sort of picture to each product to give a nicer visual display
 
+==FILE STRUCTURE==
+
+I have opted for a simple file structure that should hopefully be easy to follow, I have stived to make code as DRY as possible and easy to read.
+
+Build
+this contains basic things like the HTML file, the webpack loads the bundle here and all the css and images will be here.
+
+SRC
+-components
+this holds all the different boxes that are rendered, the ShopBox holds all the logic and passed props down to the products boxes (filtered by gender, but using the same code) and to the cart box that has some basic state to deal with the totals and vouchers/
+
+-app
+this holds the ShopBox and passes it to the HTML
+
+-sample date
+this is seed data for all the products you gave us
+
+-voucher data
+seed data for the vouchers
+
+-webpack
+for bundling code and passing to the HTML
+
+Specs
+-shopSpecs
+tests are in here but sadly are lacking at the minute
+
 
 
 
